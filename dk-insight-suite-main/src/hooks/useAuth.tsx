@@ -1,0 +1,74 @@
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { authApi, getToken, setToken, clearToken } from '@/integrations/api/client';
+
+interface UserType {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  orgId: string;
+}
+
+interface AuthContextType {
+  user: UserType | null;
+  session: any;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, displayName?: string, companyName?: string) => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<UserType | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) { setLoading(false); return; }
+    authApi.me()
+      .then(data => setUser(data.user))
+      .catch(() => clearToken())
+      .finally(() => setLoading(false));
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const data = await authApi.login(email, password);
+      setToken(data.token);
+      setUser(data.user);
+      return { error: null };
+    } catch (err: any) {
+      return { error: new Error(err.message || 'Login failed') };
+    }
+  };
+
+  const signUp = async (email: string, password: string, displayName?: string, companyName?: string) => {
+    try {
+      const data = await authApi.register(email, password, displayName, companyName);
+      setToken(data.token);
+      setUser(data.user);
+      return { error: null };
+    } catch (err: any) {
+      return { error: new Error(err.message || 'Registration failed') };
+    }
+  };
+
+  const signOut = async () => {
+    clearToken();
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, session: user, loading, signIn, signUp, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  return context;
+}
