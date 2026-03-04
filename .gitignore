@@ -1,0 +1,5 @@
+*.exe
+server/downloads/
+server/uploads/
+node_modules/
+.env
