@@ -95,7 +95,7 @@ export function LiveDeviceStatus({ className, onDeviceClick }: LiveDeviceStatusP
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
-            Updated {formatDistanceToNow(lastUpdate, { addSuffix: true })}
+            Updated {lastUpdate ? formatDistanceToNow(lastUpdate, { addSuffix: true }) : "less than a minute ago"}
           </span>
           <Button 
             variant="ghost" 

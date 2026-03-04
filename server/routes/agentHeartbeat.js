@@ -1,36 +1,25 @@
-const router = require('express').Router();
-const { Device, TelemetryEvent } = require('../models');
+const express = require('express');
+const router = express.Router();
+const { Device } = require('../models');
 const { agentAuthMiddleware } = require('../middleware/auth');
 
-// POST /agent-heartbeat
 router.post('/', agentAuthMiddleware, async (req, res) => {
   try {
-    const { agent_version, os_version, hostname } = req.body;
-    const device = req.device;
+    const { status, ipAddress, agentVersion, os } = req.body;
+    const device = await Device.findByIdAndUpdate(
+      req.device._id,
+      { status: status || 'online', lastSeen: new Date(), ipAddress, agentVersion, os },
+      { new: true }
+    );
 
-    // Update device
-    await Device.findByIdAndUpdate(device._id, {
-      lastSeen: new Date(),
-      status: 'online',
-      ...(agent_version && { agentVersion: agent_version }),
-      ...(os_version    && { os: os_version }),
-      ...(hostname      && { hostname }),
-    });
+    // Broadcast to SSE clients
+    if (req.app.locals.sseClients) {
+      const event = JSON.stringify({ type: 'heartbeat', device: { _id: device._id, hostname: device.hostname, status: device.status, lastSeen: device.lastSeen } });
+      req.app.locals.sseClients.forEach(client => client.res.write(`data: ${event}\n\n`));
+    }
 
-    // Log telemetry
-    await TelemetryEvent.create({
-      deviceId:  device._id,
-      orgId:     device.orgId,
-      eventType: 'heartbeat',
-      eventTime: new Date(),
-      details:   req.body,
-    });
-
-    res.json({ success: true, server_time: new Date().toISOString() });
-  } catch (err) {
-    console.error('Heartbeat error:', err);
-    res.status(500).json({ error: 'Heartbeat failed' });
-  }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = router;

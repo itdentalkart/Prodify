@@ -1,87 +1,52 @@
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
+const { Device, EnrollmentToken, Organization } = require('../models');
 const { v4: uuidv4 } = require('uuid');
-const { Device, EnrollmentToken, License, AuditLog, TelemetryEvent } = require('../models');
 
-// POST /agent-enroll
-// Called by Windows C# agent during first setup
-router.post('/', async (req, res) => {
+async function handleEnroll(req, res) {
   try {
-    const { enroll_token, hostname, os, device_type, ip_address, agent_version } = req.body;
+    const { enrollToken, hostname, os, agentVersion, deviceType, ipAddress } = req.body;
+    if (!enrollToken) return res.status(400).json({ error: 'enrollToken required' });
 
-    if (!enroll_token || !hostname) {
-      return res.status(400).json({ error: 'enroll_token and hostname are required' });
-    }
+    const tokenDoc = await EnrollmentToken.findOne({ token: enrollToken, usedAt: null });
+    if (!tokenDoc) return res.status(401).json({ error: 'Invalid or already used token' });
+    if (new Date() > tokenDoc.expiresAt) return res.status(401).json({ error: 'Token expired' });
 
-    // Verify enrollment token
-    const tokenData = await EnrollmentToken.findOne({
-      token: enroll_token,
-      usedAt: null,
-      expiresAt: { $gt: new Date() },
-    });
+    const agentToken = uuidv4().replace(/-/g, '') + uuidv4().replace(/-/g, '');
 
-    if (!tokenData) {
-      return res.status(401).json({ error: 'Invalid or expired enrollment token' });
-    }
-
-    // Check license availability
-    const license = await License.findOne({ orgId: tokenData.orgId });
-    if (!license || license.usedLicenses >= license.totalLicenses) {
-      return res.status(403).json({
-        error: 'No available device licenses. Contact your administrator.',
+    let device = await Device.findOne({ hostname, orgId: tokenDoc.orgId });
+    if (!device) {
+      device = await Device.create({
+        orgId: tokenDoc.orgId, hostname, os, agentVersion,
+        deviceType: deviceType || 'Desktop',
+        ipAddress, agentToken, status: 'online', lastSeen: new Date(),
       });
+    } else {
+      device.agentToken = agentToken;
+      device.status = 'online';
+      device.lastSeen = new Date();
+      device.os = os || device.os;
+      device.agentVersion = agentVersion || device.agentVersion;
+      await device.save();
     }
 
-    // Generate unique agent token
-    const agentToken = uuidv4() + '-' + uuidv4();
-
-    // Create device
-    const device = await Device.create({
-      orgId: tokenData.orgId,
-      hostname,
-      os,
-      deviceType: device_type || 'Desktop',
-      ipAddress: ip_address || req.ip,
-      agentVersion: agent_version,
-      agentToken,
-      status: 'online',
-      lastSeen: new Date(),
+    await EnrollmentToken.findByIdAndUpdate(tokenDoc._id, {
+      usedAt: new Date(), usedByDeviceId: device._id
     });
 
-    // Mark token as used
-    tokenData.usedAt = new Date();
-    tokenData.usedByDeviceId = device._id;
-    await tokenData.save();
+    // Broadcast to SSE clients
+    if (req.app.locals.sseClients) {
+      const event = JSON.stringify({ type: 'device_enrolled', device: { _id: device._id, hostname, status: 'online', lastSeen: device.lastSeen } });
+      req.app.locals.sseClients.forEach(client => client.res.write(`data: ${event}\n\n`));
+    }
 
-    // Increment used licenses
-    license.usedLicenses += 1;
-    await license.save();
-
-    // Audit log
-    await AuditLog.create({
-      orgId: tokenData.orgId,
-      userId: tokenData.createdBy,
-      action: 'DEVICE_ENROLLED',
-      resourceType: 'device',
-      resourceId: device._id.toString(),
-      details: { hostname, os, device_type },
-    });
-
-    console.log(`✅ Device enrolled: ${hostname} (${device._id})`);
-
-    res.json({
-      success: true,
-      device_id: device._id,
-      agent_token: agentToken,
-      config: {
-        screenshot_interval_sec: 300,
-        heartbeat_interval_sec: 300,
-        idle_threshold_sec: 300,
-      },
-    });
+    console.log(`✅ Device enrolled: ${hostname} (org: ${tokenDoc.orgId})`);
+    res.json({ agentToken, deviceId: device._id.toString(), orgId: tokenDoc.orgId.toString() });
   } catch (err) {
-    console.error('Enrollment error:', err);
-    res.status(500).json({ error: 'Enrollment failed' });
+    console.error('Enroll error:', err);
+    res.status(500).json({ error: err.message });
   }
-});
+}
 
+router.post('/', handleEnroll);
 module.exports = router;

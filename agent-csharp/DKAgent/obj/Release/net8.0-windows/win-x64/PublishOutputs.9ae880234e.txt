@@ -1,0 +1,7 @@
+/root/project/server/downloads/agent-build/DKAgent.pdb
+/root/project/server/downloads/agent-build/D3DCompiler_47_cor3.dll
+/root/project/server/downloads/agent-build/PenImc_cor3.dll
+/root/project/server/downloads/agent-build/PresentationNative_cor3.dll
+/root/project/server/downloads/agent-build/vcruntime140_cor3.dll
+/root/project/server/downloads/agent-build/wpfgfx_cor3.dll
+/root/project/server/downloads/agent-build/DKAgent.exe

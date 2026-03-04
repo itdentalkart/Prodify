@@ -30,7 +30,7 @@ import {
 import { DeviceWithUser } from '@/hooks/useDevices';
 import { Database } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+// import { supabase } // supabase removed;
 import { toast } from 'sonner';
 
 type DeviceStatus = Database['public']['Enums']['device_status'];

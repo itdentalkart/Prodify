@@ -35,23 +35,9 @@ function Step({ n, title, desc, children }: { n: number; title: string; desc?: s
 }
 
 export default function AgentDownload() {
-  const winRun = [
-    "# Run in PowerShell (Administrator)",
-    ".\\install-windows.ps1",
-  ].join("\n");
-
-  const linuxRun = [
-    "# Run in Terminal",
-    "chmod +x install-linux.sh",
-    "sudo ./install-linux.sh",
-  ].join("\n");
-
-  const macRun = [
-    "# Run in Terminal",
-    "chmod +x install-mac.sh",
-    "sudo ./install-mac.sh",
-  ].join("\n");
-
+  const winRun = "# PowerShell (Administrator)\n.\\install-windows.ps1";
+  const linuxRun = "chmod +x install-linux.sh\nsudo ./install-linux.sh";
+  const macRun = "chmod +x install-mac.sh\nsudo ./install-mac.sh";
   const winRm = "Stop-Service -Name \"DKAgent\" -Force\nsc.exe delete \"DKAgent\"\nRemove-Item \"$env:ProgramFiles\\DKAgent\" -Recurse -Force\nRemove-Item \"$env:ProgramData\\DKAgent\" -Recurse -Force";
   const macRm = "sudo launchctl unload /Library/LaunchDaemons/com.dk.agent.plist\nsudo rm -rf /usr/local/bin/dkagent /etc/dkagent";
   const linuxRm = "sudo systemctl stop dkagent && sudo systemctl disable dkagent\nsudo rm -f /etc/systemd/system/dkagent.service\nsudo rm -rf /usr/local/bin/dkagent /etc/dkagent";
@@ -63,41 +49,49 @@ export default function AgentDownload() {
           <CardHeader>
             <CardTitle className="text-base">Install Agent</CardTitle>
             <CardDescription>
-              Download the installer for your OS. Server URL is pre-configured automatically.
-              Get enrollment token from <strong>Devices → Generate Token</strong> before running.
+              Download the installer. Get enrollment token from <strong>Devices page → Generate Token</strong> before running.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="windows">
               <TabsList className="mb-5">
-                <TabsTrigger value="windows" className="gap-2"><Monitor  className="h-4 w-4" />Windows</TabsTrigger>
-                <TabsTrigger value="mac"     className="gap-2"><Apple    className="h-4 w-4" />macOS</TabsTrigger>
-                <TabsTrigger value="linux"   className="gap-2"><Terminal className="h-4 w-4" />Linux</TabsTrigger>
+                <TabsTrigger value="windows" className="gap-2"><Monitor className="h-4 w-4" />Windows</TabsTrigger>
+                <TabsTrigger value="mac" className="gap-2"><Apple className="h-4 w-4" />macOS</TabsTrigger>
+                <TabsTrigger value="linux" className="gap-2"><Terminal className="h-4 w-4" />Linux</TabsTrigger>
               </TabsList>
 
               <TabsContent value="windows" className="space-y-1">
-                <Step n={1} title="Download installer (Server URL auto-configured)">
-                  <a href={SERVER_URL + "/downloads/install-windows.ps1"} download="install-windows.ps1">
-                    <Button className="gap-2 mt-1"><Download className="h-4 w-4" />install-windows.ps1</Button>
-                  </a>
-                  <a href={SERVER_URL + "/downloads/install-windows.bat"} download="install-windows.bat">
-                    <Button variant="outline" className="gap-2 mt-1"><Download className="h-4 w-4" />install-windows.bat <span className="text-xs opacity-60">(double-click)</span></Button>
-                  </a>
+                <Step n={1} title="Download installer">
+                  <div className="flex gap-3 flex-wrap mt-1">
+                    <a href={SERVER_URL + "/downloads/DKAgent-Setup.exe"} download="DKAgent-Setup.exe">
+                      <Button className="gap-2">
+                        <Download className="h-4 w-4" />DKAgent-Setup.exe
+                        <span className="text-xs opacity-70 ml-1">recommended</span>
+                      </Button>
+                    </a>
+                    <a href={SERVER_URL + "/downloads/install-windows.bat"} download="install-windows.bat">
+                      <Button variant="outline" className="gap-2">
+                        <Download className="h-4 w-4" />install-windows.bat
+                      </Button>
+                    </a>
+                  </div>
                 </Step>
-                <Step n={2} title="Get enrollment token" desc="Go to Devices page → Generate Token → copy the token" />
-                <Step n={3} title="Open PowerShell as Administrator and run">
+                <Step n={2} title="Get enrollment token" desc="Devices page → Generate Token → copy the token" />
+                <Step n={3} title="Setup.exe will ask for token automatically — or for .bat run:">
                   <CopyBlock code={winRun} />
                 </Step>
-                <Step n={4} title="Device appears in dashboard within 1 minute" desc="Windows 10/11 · .NET 7 Runtime · Admin rights required" />
+                <Step n={4} title="Device appears in dashboard within 1 minute" desc="Windows 10/11 · Admin rights required" />
               </TabsContent>
 
               <TabsContent value="mac" className="space-y-1">
-                <Step n={1} title="Download installer (Server URL auto-configured)">
-                  <a href={SERVER_URL + "/downloads/install-mac.sh"} download="install-mac.sh">
-                    <Button className="gap-2 mt-1"><Download className="h-4 w-4" />install-mac.sh</Button>
-                  </a>
+                <Step n={1} title="Download installer">
+                  <div className="mt-1">
+                    <a href={SERVER_URL + "/downloads/install-mac.sh"} download="install-mac.sh">
+                      <Button className="gap-2"><Download className="h-4 w-4" />install-mac.sh</Button>
+                    </a>
+                  </div>
                 </Step>
-                <Step n={2} title="Get enrollment token" desc="Go to Devices page → Generate Token → copy the token" />
+                <Step n={2} title="Get enrollment token" desc="Devices page → Generate Token → copy the token" />
                 <Step n={3} title="Open Terminal and run">
                   <CopyBlock code={macRun} />
                 </Step>
@@ -105,12 +99,14 @@ export default function AgentDownload() {
               </TabsContent>
 
               <TabsContent value="linux" className="space-y-1">
-                <Step n={1} title="Download installer (Server URL auto-configured)">
-                  <a href={SERVER_URL + "/downloads/install-linux.sh"} download="install-linux.sh">
-                    <Button className="gap-2 mt-1"><Download className="h-4 w-4" />install-linux.sh</Button>
-                  </a>
+                <Step n={1} title="Download installer">
+                  <div className="mt-1">
+                    <a href={SERVER_URL + "/downloads/install-linux.sh"} download="install-linux.sh">
+                      <Button className="gap-2"><Download className="h-4 w-4" />install-linux.sh</Button>
+                    </a>
+                  </div>
                 </Step>
-                <Step n={2} title="Get enrollment token" desc="Go to Devices page → Generate Token → copy the token" />
+                <Step n={2} title="Get enrollment token" desc="Devices page → Generate Token → copy the token" />
                 <Step n={3} title="Open Terminal and run">
                   <CopyBlock code={linuxRun} />
                 </Step>
@@ -130,12 +126,12 @@ export default function AgentDownload() {
           <CardContent>
             <Tabs defaultValue="win-rm">
               <TabsList className="mb-4">
-                <TabsTrigger value="win-rm"   className="gap-2"><Monitor  className="h-3.5 w-3.5" />Windows</TabsTrigger>
-                <TabsTrigger value="mac-rm"   className="gap-2"><Apple    className="h-3.5 w-3.5" />macOS</TabsTrigger>
+                <TabsTrigger value="win-rm" className="gap-2"><Monitor className="h-3.5 w-3.5" />Windows</TabsTrigger>
+                <TabsTrigger value="mac-rm" className="gap-2"><Apple className="h-3.5 w-3.5" />macOS</TabsTrigger>
                 <TabsTrigger value="linux-rm" className="gap-2"><Terminal className="h-3.5 w-3.5" />Linux</TabsTrigger>
               </TabsList>
-              <TabsContent value="win-rm">  <CopyBlock code={winRm}   /></TabsContent>
-              <TabsContent value="mac-rm">  <CopyBlock code={macRm}   /></TabsContent>
+              <TabsContent value="win-rm"><CopyBlock code={winRm} /></TabsContent>
+              <TabsContent value="mac-rm"><CopyBlock code={macRm} /></TabsContent>
               <TabsContent value="linux-rm"><CopyBlock code={linuxRm} /></TabsContent>
             </Tabs>
           </CardContent>
